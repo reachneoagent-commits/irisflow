@@ -8,6 +8,7 @@ fn main() {
     let cap = format!(
         "{{\n  \"identifier\": \"main\",\n  \"windows\": [\"main\", \"overlay\"],\n  \"remote\": {{ \"urls\": [\"http://localhost:5173/*\", \"{origin}/*\"] }},\n  \"permissions\": [\"core:default\", \"core:event:default\", \"allow-overlay-toggle\"]\n}}\n"
     );
+    std::fs::create_dir_all("capabilities").expect("create capabilities dir");
     std::fs::write("capabilities/main.json", cap).expect("write capability");
     tauri_build::try_build(
         tauri_build::Attributes::new()
