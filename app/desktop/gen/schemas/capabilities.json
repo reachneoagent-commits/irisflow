@@ -1,1 +1,0 @@
-{"main":{"identifier":"main","description":"","remote":{"urls":["http://localhost:5173/*","http://localhost:5173/*"]},"local":true,"windows":["main","overlay"],"permissions":["core:default","core:event:default","allow-overlay-toggle"]}}
