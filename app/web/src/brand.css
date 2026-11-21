@@ -17,6 +17,7 @@
 }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { background: var(--iris-black); color: var(--iris-paper); font-family: var(--font-body); }
 h1, h2, h3, .wordmark { font-family: var(--font-display); font-weight: 600; letter-spacing: .01em; }
 
@@ -38,7 +39,7 @@ input.field::placeholder { color: #8a8a8a; }
 .brand img { height: 28px; }
 .brand .wordmark { font-size: 24px; color: var(--iris-paper); }
 
-.page { min-height: 100%; display: flex; flex-direction: column; }
+.page { min-height: 100%; min-height: 100dvh; display: flex; flex-direction: column; }
 .page header { padding: 20px 24px; }
 .center { flex: 1; display: grid; place-items: center; padding: 24px; }
 .card { width: min(520px, 100%); display: grid; gap: 14px; }
@@ -297,3 +298,83 @@ input.field::placeholder { color: #8a8a8a; }
 .bbtn:disabled:hover { transform: none; }
 .guest-note { padding: 12px 14px; border: 1px solid #2a2a2a; border-radius: 12px; background: rgba(255,255,255,.04); font-size: 14px; color: #cfcfc8; }
 .guest-note strong { color: var(--iris-lime); font-weight: 600; overflow-wrap: anywhere; }
+
+/* ---- Phones & small screens: real viewport height, notches, keyboards, landscape ---- */
+.room-root { position: relative; height: 100vh; height: 100dvh; }
+.room-root .lk-video-conference { height: 100%; }
+/* 16px inputs stop iOS Safari zooming the page on focus (which pushes fields off screen) */
+input, select, textarea, .lk-form-control { font-size: 16px; }
+.lk-prejoin input.lk-form-control, .lk-prejoin .lk-username-container input { width: 100%; min-height: 44px; }
+.page header, .credit { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
+.center { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
+.meet-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.panel { padding-bottom: env(safe-area-inset-bottom); }
+.toast { top: calc(16px + env(safe-area-inset-top)); }
+.btn, .ibtn, .bbtn { touch-action: manipulation; }
+.card h1 { font-size: clamp(30px, 8vw, 40px); }
+.lk-prejoin .lk-video-container { max-height: 38dvh; }
+.lk-prejoin video { object-fit: cover; }
+@media (max-width: 800px) {
+  .center { padding-top: 8px; padding-bottom: 16px; }
+  .page header { padding-top: 14px; padding-bottom: 6px; }
+  .lk-prejoin { padding: 0; gap: 10px; }
+  .row { flex-wrap: nowrap; }
+  .invite-link { flex-wrap: wrap; }
+  .more-pop[data-open] { top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 130px); overflow-y: auto; }
+  .hands { bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .float { bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+/* Landscape phones: very little height. Put the controls beside the video and tighten the bar. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .page header { padding: 8px 16px; }
+  .brand img { height: 22px; } .brand .wordmark { font-size: 20px; }
+  .center { align-content: start; padding-top: 4px; }
+  .hero .card, .prejoin .card { width: min(720px, 100%); }
+  .lk-prejoin { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  .lk-prejoin .lk-video-container { max-height: 60dvh; grid-row: 1 / span 3; }
+  .card h1 { font-size: 26px; }
+  .card h2 { font-size: 18px; }
+  .guest-note, .invite-card { padding: 8px 12px; }
+  .meet-bar { padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+  .bico, .meet-bar .lk-button-group > .lk-button > svg, .leave-btn > svg { padding-top: 7px; padding-bottom: 7px; }
+  .meet-bar .chev-btn, .meet-bar .lk-button-group-menu .lk-button { height: 38px; }
+  .blabel, .bbtn .blabel { font-size: 11px; }
+  .more-pop[data-open] { bottom: calc(70px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 90px); grid-template-columns: repeat(6, 1fr); width: min(560px, calc(100vw - 16px)); }
+}
+
+/* LiveKit assumes a 69px control bar; ours is taller. Let the stage fill what the bar leaves, so tiles never sit under the buttons. */
+.lk-video-conference-inner { height: 100%; min-height: 0; }
+.draw-host { flex: 1 1 0; min-height: 0; }
+.draw-host > .lk-grid-layout-wrapper, .draw-host > .lk-focus-layout-wrapper { height: 100%; min-height: 0; }
+.meet-bar { flex: none; }
+/* iOS needs a tap to start audio. Keep that prompt above the bar, not dead-centre over everything. */
+.lk-start-audio-button { position: fixed !important; top: auto !important; left: 50% !important; bottom: calc(110px + env(safe-area-inset-bottom)); transform: translateX(-50%) !important; z-index: 45; white-space: normal; text-align: center; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.5); font-weight: 600; }
+
+/* Prejoin: LiveKit gives the mic/camera groups height:100% and wraps them at <=400px, so each stretched to the
+   whole container and covered the name field and Join button (iPhone widths). Size them to their content. */
+.lk-prejoin .lk-button-group-container { flex-wrap: wrap; gap: 10px; }
+.lk-prejoin .lk-button-group-container > .lk-button-group { height: auto; flex: 1 1 140px; width: auto; min-width: 0; }
+.lk-prejoin .lk-button-group > .lk-button { min-height: 46px; }
+.lk-prejoin .lk-join-button { min-height: 48px; width: 100%; }
+@media (max-width: 400px) { .lk-prejoin .lk-button-group-container > .lk-button-group { flex-basis: 100%; } }
+
+/* ---- Pen colours: big tap targets, clear selected state, visible on phones ---- */
+.swatch { width: 32px; height: 32px; border: 2px solid rgba(255,255,255,.25); box-sizing: border-box; display: inline-grid; place-items: center; transition: transform .1s; }
+.swatch.sel { border-color: #fff; box-shadow: 0 0 0 2px #1a1a1a, 0 0 0 4px #fff; transform: scale(1.1); }
+.swatch.sel::after { content: ''; width: 8px; height: 14px; border: solid #0B0B0B; border-width: 0 3px 3px 0; transform: translateY(-1px) rotate(45deg); mix-blend-mode: difference; }
+.pen-name { font-size: 13px; color: #d6d6cf; min-width: 44px; }
+.pen-dot { position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #0B0B0B; box-sizing: border-box; }
+@media (max-width: 900px) {
+  .draw-pop { position: fixed; left: 50%; right: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 100px); transform: translateX(-50%); z-index: 45; gap: 14px; padding: 12px 16px; box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+  .swatch { width: 40px; height: 40px; }
+}
+
+/* Clear "what to fill in" cues: visible labels, required hint, empty-name highlight */
+.flabel { font-size: 13px; font-weight: 600; color: #d6d6cf; margin-bottom: -6px; }
+.flabel em { font-style: normal; font-weight: 400; color: var(--iris-grey); margin-left: 6px; }
+.lk-prejoin .lk-username-container { display: grid; gap: 10px; }
+.lk-prejoin .lk-username-container::before { content: "Your name  ·  required to join"; font-size: 13px; font-weight: 600; color: #d6d6cf; }
+.lk-prejoin .lk-username-container:has(input:placeholder-shown) input { border-color: var(--iris-lime); box-shadow: 0 0 0 3px rgba(229,254,83,.18); }
+.lk-prejoin .lk-username-container:has(.lk-join-button:disabled)::after { content: "Type your name above to enable the button"; font-size: 13px; color: var(--iris-lime); text-align: center; }
+.left-hero .card .row { margin-top: 6px; }
+@media (max-width: 900px) { .left-hero .hero-art { width: min(220px, 60vw); } }

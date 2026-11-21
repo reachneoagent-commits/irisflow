@@ -8,6 +8,7 @@ import { IconBtn, ICON, toast } from './ui.jsx'
 // on the "draw" data topic. Viewers render them over the shared-screen video and they fade out.
 const enc = new TextEncoder(), dec = new TextDecoder()
 const COLORS = ['#E5FE53', '#ff4d4d', '#4da3ff', '#ffffff']
+const NAMES = ['Yellow', 'Red', 'Blue', 'White']
 const FADE_AFTER = 5000, FADE_FOR = 1200
 const MAX_STROKES = 200, MAX_POINTS = 2000
 
@@ -147,11 +148,12 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
       <div className="draw-tools">
         {(on || overlay) && showPen && (
           <div className="draw-pop">
-            {COLORS.map((c) => <button key={c} className="swatch" style={{ background: c, outline: c === color ? '2px solid #fff' : 'none' }} onClick={() => setColor(c)} aria-label={`Pen ${c}`} />)}
+            {COLORS.map((c, i) => <button key={c} type="button" className={`swatch${c === color ? ' sel' : ''}`} style={{ background: c }} onClick={() => setColor(c)} aria-label={`Pen ${NAMES[i]}`} aria-pressed={c === color} title={NAMES[i]} />)}
+            <span className="pen-name">{NAMES[COLORS.indexOf(color)]}</span>
             <button className="btn btn-ghost sm" onClick={clear}>Clear</button>
           </div>
         )}
-        <IconBtn short="Draw" label={canUse ? 'Draw on the shared screen' : 'Draw (available once a screen is shared)'} active={on || overlay} disabled={!canUse} onClick={toggle}><Pencil {...ICON} /></IconBtn>
+        <IconBtn short="Draw" label={canUse ? 'Draw on the shared screen' : 'Draw (available once a screen is shared)'} active={on || overlay} disabled={!canUse} onClick={toggle}><Pencil {...ICON} />{(on || overlay) && <span className="pen-dot" style={{ background: color }} />}</IconBtn>
       </div>
     </>
   )

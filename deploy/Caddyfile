@@ -1,0 +1,19 @@
+# Plain HTTP on :80. TLS is terminated by the Cloudflare Tunnel (public hostname -> http://<this host>:80).
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	# LiveKit signalling (websocket) lives under /lk so one hostname does everything.
+	handle_path /lk/* {
+		reverse_proxy 127.0.0.1:7880
+	}
+
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+}
