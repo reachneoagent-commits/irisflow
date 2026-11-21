@@ -1,21 +1,28 @@
-<p align="center">
-  <img src="assets/icon.png" width="128" height="128" alt="Irisflow icon">
-</p>
-
-<h1 align="center">Irisflow</h1>
+<table align="center">
+  <tr>
+    <td><img src="assets/icon.png" width="128" height="128" alt="Irisflow logo"></td>
+    <td><h1>Irisflow</h1></td>
+  </tr>
+</table>
 
 <p align="center"><b>Free, open source video meetings. Share a link, talk, share your screen, draw on it.</b></p>
 
 Irisflow is part of the FlowApps suite. It is a Google Meet-style meeting app you host yourself, with no accounts.
 
-## What it does
+## Why Irisflow?
+
+- **Free and open source**, Apache 2.0
+- **No accounts**: guests join from a link or a code
+- **Hosted by you**: run it on your own LiveKit server
+- **Works on phones and desktops**: a desktop app for Mac and Windows, or any modern browser
+
+## Features
 
 - **Start a meeting, share the link or the code.** Guests need no account.
 - **Host controls.** A waiting room (the host lets people in), mute, remove, and end the meeting.
 - **Screen sharing, with drawing.** Draw on the shared screen. Draw switches on once someone is sharing.
 - **Chat, raised hands and reactions.**
 - **Works on phones.** The bottom bar folds into a More menu on small screens.
-- **Desktop app** for Mac and Windows (Tauri), plus any modern browser.
 
 ## Download and install
 
@@ -31,7 +38,12 @@ Installers for Mac and Windows are being built and will appear on the
 The app is not code-signed with a paid certificate, so macOS and Windows warn you the first time you open it.
 Every release lists SHA-256 checksums to check the files against.
 
-## Run it from source
+## Supported platforms
+
+- **Desktop app:** macOS on Apple silicon, and Windows x64
+- **Browser:** any modern browser, on desktop or phone
+
+## Build from source
 
 You need Node 20+, a [LiveKit server](https://docs.livekit.io/home/self-hosting/local/), and Rust if you want the desktop shell.
 
@@ -45,6 +57,14 @@ cd app/desktop && cargo run                 # optional desktop shell, loads :517
 For a real deployment set `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` and `LIVEKIT_HTTP_URL` on the token server. The built-in
 `devkey` and `secret` values are for local testing only.
 
-## Credits and license
+## About this fork
 
-Apache 2.0. Built on LiveKit, Tauri, React and more. Full credits in `NOTICE`. Brand font: Firjar (OFL).
+Irisflow is built on [LiveKit](https://livekit.io), [Tauri](https://tauri.app), [React](https://react.dev) and more.
+
+### Credits
+
+Full credits are in `NOTICE`. Brand font: Firjar (SIL Open Font License).
+
+## License
+
+Apache 2.0.
