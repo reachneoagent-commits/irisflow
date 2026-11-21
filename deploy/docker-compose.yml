@@ -1,0 +1,35 @@
+# Irisflow self-host: LiveKit (media) + token server (API) + Caddy (HTTPS, serves the web app).
+# Host networking keeps WebRTC UDP simple. Copy .env.example to .env and fill it in first.
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    network_mode: host
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+
+  server:
+    build: ../app/server
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      LIVEKIT_HTTP_URL: http://127.0.0.1:7880
+      INVITE_CODES: ${INVITE_CODES}
+      PORT: "8787"
+
+  caddy:
+    image: caddy:2
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/web:ro
+      - caddy_data:/data
+
+volumes:
+  caddy_data:

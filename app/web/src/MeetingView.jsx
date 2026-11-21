@@ -65,7 +65,9 @@ export default function MeetingView({ code, grant, isHost }) {
     }
   }, [shares.map((t) => `${t.publication.trackSid}_${t.publication.isSubscribed}`).join(), tracks])
 
-  const share = <div className="lk-button-group"><TrackToggle source={Track.Source.ScreenShare} captureOptions={{ audio: true, selfBrowserSurface: 'include' }} showIcon={true}>Share</TrackToggle></div>
+  // Phones can't capture the screen from a browser (no getDisplayMedia), so hide the dead button.
+  const canShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
+  const share = !canShare ? null : <div className="lk-button-group"><TrackToggle source={Track.Source.ScreenShare} captureOptions={{ audio: true, selfBrowserSurface: 'include' }} showIcon={true}>Share</TrackToggle></div>
   const leave = <DisconnectButton className="leave-btn" aria-label="Leave meeting" title="Leave meeting"><PhoneOff {...ICON} /><span className="blabel">Leave</span></DisconnectButton>
   const draw = <Draw hostRef={hostRef} host={host} sharerId={shares[0]?.participant.identity} canDraw />
   const people = <IconBtn short="People" label="People" active={panel === 'people'} badge={isHost && waiting.length ? waiting.length : 0} onClick={() => toggle('people')}><Users {...ICON} /></IconBtn>

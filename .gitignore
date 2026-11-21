@@ -14,3 +14,4 @@ spike/
 brand/
 app/desktop/gen/
 app/desktop/capabilities/main.json
+!.env.example

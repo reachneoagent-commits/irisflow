@@ -1,4 +1,5 @@
 import meetingArt from './art/meeting.svg'
+import leftArt from './art/left.svg'
 import Credit from './Credit.jsx'
 import { RotateCcw, Home, X } from 'lucide-react'
 import React, { useState, useEffect, useRef } from 'react'
@@ -50,14 +51,21 @@ export default function Room({ code, onLeave }) {
   const cancelWait = () => { clearInterval(poll.current); setStage('prejoin') }
 
   if (stage === 'left') return (
-    <div className="page"><div className="leave">
-      <Brand />
-      <h2>You left the meeting</h2>
-      <div className="row">
-        <button className="btn btn-primary" onClick={() => { setToken(null); setStage('prejoin') }}><RotateCcw size={18} /> Rejoin</button>
-        <button className="btn btn-ghost" onClick={onLeave}><Home size={18} /> Home</button>
+    <div className="page">
+      <header><Brand /></header>
+      <div className="center hero left-hero">
+        <div className="card">
+          <h1>You left the meeting</h1>
+          <p>Left by mistake? Jump back in, or head home to start something new.</p>
+          <div className="row">
+            <button className="btn btn-primary" onClick={() => { setToken(null); setStage('prejoin') }}><RotateCcw size={18} /> Rejoin</button>
+            <button className="btn btn-ghost" onClick={onLeave}><Home size={18} /> Home</button>
+          </div>
+        </div>
+        <img className="hero-art" src={leftArt} alt="" />
       </div>
-    </div></div>
+      <Credit />
+    </div>
   )
 
   if (stage === 'missing') return (
@@ -119,7 +127,7 @@ export default function Room({ code, onLeave }) {
       connect
       video={choices.videoEnabled ? { deviceId: choices.videoDeviceId } : false}
       audio={choices.audioEnabled ? { deviceId: choices.audioDeviceId } : false}
-      style={{ height: '100vh', position: 'relative' }}
+      className="room-root"
       onDisconnected={() => setStage('left')}
     >
       <MeetingView code={code} grant={grant} isHost={isHost} />

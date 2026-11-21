@@ -16,6 +16,26 @@ const MAX_PENDING_PER_ROOM = 50
 
 const rooms = new RoomServiceClient(LK_HTTP, KEY, SECRET)
 
+// Invite codes gate *creating* meetings (comma-separated INVITE_CODES). Guests join a
+// meeting by its unguessable link and a host's approval, so they don't need a code.
+// Unset = open, which is what local dev uses.
+const INVITE_CODES = (process.env.INVITE_CODES || '').split(',').map((s) => s.trim()).filter(Boolean)
+const FAIL_MAX = 10, FAIL_WINDOW_MS = 10 * 60 * 1000
+const fails = new Map() // ip -> { n, since }
+function codeOk(given, ip) {
+  if (!INVITE_CODES.length) return true
+  const f = fails.get(ip)
+  if (f && Date.now() - f.since < FAIL_WINDOW_MS && f.n >= FAIL_MAX) return false
+  const g = Buffer.from(String(given ?? ''))
+  const ok = INVITE_CODES.some((c) => { const b = Buffer.from(c); return b.length === g.length && crypto.timingSafeEqual(b, g) })
+  if (!ok) {
+    const fresh = !f || Date.now() - f.since >= FAIL_WINDOW_MS
+    fails.set(ip, { n: fresh ? 1 : f.n + 1, since: fresh ? Date.now() : f.since })
+  }
+  return ok
+}
+setInterval(() => { const now = Date.now(); for (const [k, v] of fails) if (now - v.since > FAIL_WINDOW_MS) fails.delete(k) }, 60_000).unref()
+
 // room -> Map(requestId -> { name, status, token?, created })
 const lobby = new Map()
 
@@ -87,6 +107,8 @@ http.createServer(async (req, res) => {
 
     // Create a meeting. The caller becomes its host.
     if (path === '/api/rooms' && req.method === 'POST') {
+      const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
+      if (!codeOk(body.code, ip)) return send(res, 401, { error: 'invite code required' })
       const room = code()
       known.set(room, Date.now() + KNOWN_TTL_MS)
       return send(res, 200, { room, hostGrant: grantFor(room) })
