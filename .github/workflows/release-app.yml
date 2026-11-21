@@ -9,6 +9,7 @@
 # Outputs:
 #   Irisflow-<version>-macos-arm64.dmg
 #   Irisflow-<version>-windows-x64-setup.exe
+#   Irisflow-<version>-windows-x64-portable.zip   (what the FlowApps launcher installs)
 # Not code-signed yet: macOS and Windows warn the first time it is opened.
 name: release-app
 
@@ -77,6 +78,10 @@ jobs:
             cp "$B"/dmg/*.dmg "out/Irisflow-$V-macos-arm64.dmg"
           else
             cp "$B"/nsis/*.exe "out/Irisflow-$V-windows-x64-setup.exe"
+            # Portable zip for the FlowApps launcher: Irisflow.exe at the top level.
+            mkdir portable
+            cp app/desktop/target/${{ matrix.target }}/release/irisflow-desktop.exe portable/Irisflow.exe
+            (cd portable && 7z a -tzip "../out/Irisflow-$V-windows-x64-portable.zip" Irisflow.exe)
           fi
           (cd out && shasum -a 256 * > "SHA256-${{ matrix.label }}.txt")
       - uses: actions/upload-artifact@v4

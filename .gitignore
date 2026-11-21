@@ -9,3 +9,8 @@ DECISION.md
 meeting_app_handoff.md
 desktop-spike/
 spike/
+
+# Local-only: brand sources, generated Tauri files
+brand/
+app/desktop/gen/
+app/desktop/capabilities/main.json
