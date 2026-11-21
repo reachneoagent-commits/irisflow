@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="brand/logo color.svg" alt="Irisflow" width="280">
+  <img src="assets/icon.png" width="128" height="128" alt="Irisflow icon">
 </p>
+
+<h1 align="center">Irisflow</h1>
 
 <p align="center"><b>Free, open source video meetings. Share a link, talk, share your screen, draw on it.</b></p>
 
@@ -15,10 +17,19 @@ Irisflow is part of the FlowApps suite. It is a Google Meet-style meeting app yo
 - **Works on phones.** The bottom bar folds into a More menu on small screens.
 - **Desktop app** for Mac and Windows (Tauri), plus any modern browser.
 
-## Status
+## Download and install
 
-Early. It runs from source today. Installers for macOS and Windows, and a listing in the
-[FlowApps launcher](https://github.com/reachneoagent-commits/FlowApps-Launcher), are planned. Nothing is code-signed yet.
+Installers for Mac and Windows are being built and will appear on the
+[latest release](https://github.com/reachneoagent-commits/irisflow/releases/latest). It is also coming to the
+[FlowApps launcher](https://github.com/reachneoagent-commits/FlowApps-Launcher/releases/latest).
+
+| Platform | Installer |
+|---|---|
+| macOS, Apple silicon (M1 or newer) | [DMG](https://github.com/reachneoagent-commits/irisflow/releases/latest) (`Irisflow-<version>-macos-arm64.dmg`) |
+| Windows x64 | [Installer](https://github.com/reachneoagent-commits/irisflow/releases/latest) (`Irisflow-<version>-windows-x64-setup.exe`) |
+
+The app is not code-signed with a paid certificate, so macOS and Windows warn you the first time you open it.
+Every release lists SHA-256 checksums to check the files against.
 
 ## Run it from source
 

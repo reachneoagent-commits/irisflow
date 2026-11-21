@@ -1,0 +1,92 @@
+# Builds the Irisflow desktop installers.
+# Run: Actions > release-app > Run workflow (enter a version), or push a tag like app-v0.1.0.
+# A tag push also creates a DRAFT release with the files attached; publish it on GitHub.
+#
+# Set the meeting server address the installed app opens:
+#   Settings > Secrets and variables > Actions > Variables > IRISFLOW_URL  (e.g. https://meet.example.com)
+# Without it the app opens http://localhost:5173 (local development only).
+#
+# Outputs:
+#   Irisflow-<version>-macos-arm64.dmg
+#   Irisflow-<version>-windows-x64-setup.exe
+# Not code-signed yet: macOS and Windows warn the first time it is opened.
+name: release-app
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, e.g. 0.1.0"
+        required: true
+        default: "0.1.0"
+  push:
+    tags: ["app-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            bundles: dmg
+            label: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+            label: windows-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      IRISFLOW_URL: ${{ vars.IRISFLOW_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: app/desktop
+      - name: Version
+        id: v
+        shell: bash
+        run: |
+          V="${{ github.event.inputs.version }}"
+          if [ -z "$V" ]; then V="${GITHUB_REF_NAME#app-v}"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+      - name: Set version
+        shell: bash
+        working-directory: app/desktop
+        run: |
+          sed -i.bak "s/\"version\": \".*\"/\"version\": \"${{ steps.v.outputs.version }}\"/" tauri.conf.json && rm tauri.conf.json.bak
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+      - name: Build
+        working-directory: app/desktop
+        run: cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir out
+          V="${{ steps.v.outputs.version }}"
+          B=app/desktop/target/${{ matrix.target }}/release/bundle
+          if [ "${{ matrix.label }}" = "macos-arm64" ]; then
+            cp "$B"/dmg/*.dmg "out/Irisflow-$V-macos-arm64.dmg"
+          else
+            cp "$B"/nsis/*.exe "out/Irisflow-$V-windows-x64-setup.exe"
+          fi
+          (cd out && shasum -a 256 * > "SHA256-${{ matrix.label }}.txt")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: irisflow-${{ matrix.label }}
+          path: out/*
+      - name: Draft release (tag pushes)
+        if: startsWith(github.ref, 'refs/tags/app-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Irisflow ${{ steps.v.outputs.version }}
+          files: out/*
