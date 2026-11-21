@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8"><title>Irisflow drawing</title>
+<style>
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;font:14px system-ui}
+canvas{position:fixed;inset:0;cursor:crosshair}
+#bar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:#000;color:#fff;border:1px solid #333;border-radius:999px;padding:8px 12px}
+#bar button{font:inherit;border:0;border-radius:999px;padding:6px 12px;background:#222;color:#fff;cursor:pointer}
+#bar .sw{width:22px;height:22px;padding:0;border-radius:50%}
+#bar .done{background:#E5FE53;color:#000}
+</style>
+<canvas id=c></canvas>
+<div id=bar></div>
+<script>
+const COLORS=['#E5FE53','#ff4d4d','#4da3ff','#ffffff'], FADE_AFTER=5000, FADE_FOR=1200;
+const cv=document.getElementById('c'), g=cv.getContext('2d'), bar=document.getElementById('bar');
+const T=window.__TAURI__; let color=COLORS[0], strokes=[], cur=null, pending=[], tick=null;
+function size(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio}
+size(); addEventListener('resize',size);
+function emit(m){T.event.emit('iris-draw',m)}
+function rid(){return Math.random().toString(36).slice(2,8)}
+function btn(t,cls,fn){const b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;b.onclick=fn;bar.append(b);return b}
+function render(){
+  COLORS.forEach(c=>{const b=btn('','sw',()=>{color=c;render()});b.style.background=c;b.style.outline=c===color?'2px solid #fff':'none'});
+}
+function build(){bar.innerHTML='';render();btn('Clear','',()=>{strokes=[];emit({t:'clear'})});btn('Done','done',()=>T.core.invoke('overlay_toggle'))}
+build();
+function flush(){if(cur&&pending.length){emit({t:'s',id:cur.id,c:color,p:pending});pending=[]}}
+function pt(e){return [+(e.clientX/innerWidth).toFixed(4),+(e.clientY/innerHeight).toFixed(4)]}
+cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);cur={id:rid(),c:color,pts:[],last:performance.now()};strokes.push(cur);const p=pt(e);cur.pts.push(p);pending.push(...p);tick=setInterval(flush,40)};
+cv.onpointermove=e=>{if(!cur)return;const p=pt(e);cur.pts.push(p);cur.last=performance.now();pending.push(...p)};
+cv.onpointerup=()=>{flush();clearInterval(tick);cur=null};
+addEventListener('keydown',e=>{if(e.key==='Escape')T.core.invoke('overlay_toggle')});
+(function loop(){
+  g.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);g.clearRect(0,0,innerWidth,innerHeight);
+  g.lineCap='round';g.lineJoin='round';g.lineWidth=5;const now=performance.now();
+  strokes=strokes.filter(s=>now-s.last-FADE_AFTER<FADE_FOR||s===cur);
+  for(const s of strokes){const a=now-s.last-FADE_AFTER;g.globalAlpha=a>0&&s!==cur?1-a/FADE_FOR:1;g.strokeStyle=s.c;g.beginPath();
+    s.pts.forEach(([x,y],i)=>i?g.lineTo(x*innerWidth,y*innerHeight):g.moveTo(x*innerWidth,y*innerHeight));
+    if(s.pts.length===1)g.lineTo(s.pts[0][0]*innerWidth+.1,s.pts[0][1]*innerHeight);g.stroke()}
+  requestAnimationFrame(loop)})();
+</script>

@@ -1,0 +1,6 @@
+{
+  "identifier": "main",
+  "windows": ["main", "overlay"],
+  "remote": { "urls": ["http://localhost:5173/*"] },
+  "permissions": ["core:default", "core:event:default", "allow-overlay-toggle"]
+}

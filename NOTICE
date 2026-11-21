@@ -1,0 +1,12 @@
+Irisflow
+Part of the FlowApps suite. Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Built on these open source projects:
+- LiveKit server (https://github.com/livekit/livekit), Apache 2.0: the video, audio and screen-share server.
+- LiveKit client SDK, components-react and server SDK (https://github.com/livekit), Apache 2.0.
+- Tauri 2 (https://tauri.app), Apache 2.0 / MIT: the desktop shell.
+- React and Vite, MIT.
+- lucide-react (https://lucide.dev), ISC: icons.
+- Firjar font, SIL Open Font License 1.1 (brand/Firjar/OFL.txt, app/web/public/fonts/OFL.txt).
+
+Irisflow is not affiliated with or endorsed by LiveKit, Google or any of the projects above.

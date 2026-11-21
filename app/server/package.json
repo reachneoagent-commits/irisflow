@@ -1,0 +1,3 @@
+{ "name": "irisflow-token-server", "private": true, "type": "module",
+  "scripts": { "start": "node index.js" },
+  "dependencies": { "livekit-server-sdk": "^2.9.0" } }

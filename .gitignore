@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+target/
+dist/
+.env
+.env.*
+# internal planning notes and old experiments
+DECISION.md
+meeting_app_handoff.md
+desktop-spike/
+spike/
