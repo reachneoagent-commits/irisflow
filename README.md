@@ -1,9 +1,9 @@
-<table align="center">
-  <tr>
-    <td><img src="assets/icon.png" width="128" height="128" alt="Irisflow logo"></td>
-    <td><h1>Irisflow</h1></td>
-  </tr>
-</table>
+<p align="left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/header-dark.png">
+    <img src="assets/header-light.png" width="600" height="160" alt="Irisflow logo and name">
+  </picture>
+</p>
 
 <p align="center"><b>Free, open source video meetings. Share a link, talk, share your screen, draw on it.</b></p>
 
