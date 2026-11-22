@@ -7,6 +7,7 @@ body.pen canvas{cursor:crosshair}
 body.pen #bar{display:flex}
 #bar button{font:inherit;border:0;border-radius:999px;padding:6px 12px;background:#222;color:#fff;cursor:pointer}
 #bar .sw{width:22px;height:22px;padding:0;border-radius:50%;border:1px solid #666}
+#bar .stop{background:#d93025}
 #bar .done{background:#E5FE53;color:#000}
 </style>
 <canvas id=c></canvas>
@@ -19,21 +20,26 @@ const cv=document.getElementById('c'), g=cv.getContext('2d'), bar=document.getEl
 const T=window.__TAURI__; let color=COLORS[1], strokes=new Map(), cur=null, pending=[], tick=null, pen=false;
 function size(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio}
 size(); addEventListener('resize',size);
+function log(m){try{T.core.invoke('log_line',{msg:'overlay: '+m})}catch(e){}}
+log('loaded '+innerWidth+'x'+innerHeight);
 function emit(m){T.event.emit('iris-draw',m)}
 function rid(){return Math.random().toString(36).slice(2,8)}
 function btn(t,cls,fn){const b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;b.onclick=fn;bar.append(b);return b}
 function build(){
   bar.innerHTML='';
   COLORS.forEach((c,i)=>{const b=btn('','sw',()=>{color=c;build()});b.title=NAMES[i];b.setAttribute('aria-label','Pen '+NAMES[i]);b.style.background=c;b.style.outline=c===color?'2px solid #E5FE53':'none';b.style.outlineOffset='2px'});
-  btn('Clear','',()=>{for(const k of [...strokes.keys()])if(k.startsWith('me:'))strokes.delete(k);emit({t:'clear'})});
+  btn('Clear','',()=>{strokes.clear();emit({t:'clear'})});
+  btn('Stop sharing','stop',()=>{endPen();T.event.emit('iris-stop-share',true)});
   btn('Done','done',endPen);
 }
 function endPen(){T.core.invoke('overlay_pen',{on:false})}
 build();
+T.event.listen('iris-color',e=>{if(COLORS.includes(e.payload)){color=e.payload;build()}});
+T.event.listen('iris-clear',()=>strokes.clear());
 T.event.listen('iris-pen-state',e=>{pen=!!e.payload;document.body.classList.toggle('pen',pen)});
 // Strokes drawn by other people arrive from the meeting window, already normalised to the screen.
 T.event.listen('iris-remote',e=>{
-  const {who,m}=e.payload||{};
+  const {who,m}=e.payload||{};log('remote '+who+' '+(m&&m.t));
   if(m.t==='clear'){for(const k of [...strokes.keys()])if(k.startsWith(who+':'))strokes.delete(k);return}
   if(typeof m.id!=='string'||!Array.isArray(m.p))return;
   const key=who+':'+m.id; let s=strokes.get(key);

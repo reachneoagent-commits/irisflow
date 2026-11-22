@@ -38,7 +38,8 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
       const m = JSON.parse(dec.decode(msg.payload))
       apply(msg.from.identity, m)
       // Desktop presenter: show other people's marks on the real screen too.
-      if (window.__TAURI__?.event && sharingRef.current) window.__TAURI__.event.emit('iris-remote', { who: msg.from.identity, m })
+      if (window.__TAURI__?.core) window.__TAURI__.core.invoke('log_line', { msg: 'main got stroke from ' + msg.from?.identity + ' sharing=' + sharingRef.current }).catch(() => {})
+    if (window.__TAURI__?.event && sharingRef.current) window.__TAURI__.event.emit('iris-remote', { who: msg.from.identity, m })
     } catch { /* ignore */ }
   })
 
@@ -113,6 +114,12 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
     T.core.invoke('share_mode', { on: !!sharing }).catch(() => {})
     return () => { if (sharing) T.core.invoke('share_mode', { on: false }).catch(() => {}) }
   }, [T, sharing])
+  useEffect(() => {
+    if (!T?.event) return
+    let un
+    T.event.listen('iris-stop-share', () => localParticipant.setScreenShareEnabled(false)).then((f) => { un = f })
+    return () => un && un()
+  }, [T, localParticipant])
   const say = (text, kind) => toast(text, kind)
   const toggle = async () => {
     if (!sharerId && !sharing) return // button is disabled in this state
@@ -148,7 +155,7 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
   }
   const move = (e) => { if (mine.current) { const p = pos(e); if (p) add(p) } }
   const up = () => { mine.current = null }
-  const clear = () => { emit({ t: 'clear' }); apply(localParticipant.identity, { t: 'clear' }) }
+  const clear = () => { emit({ t: 'clear' }); apply(localParticipant.identity, { t: 'clear' }); if (T?.event && sharing) T.event.emit('iris-clear', true) }
 
   // Available while anyone is sharing. Local strokes are keyed by the local identity.
   const canUse = !!(sharing || sharerId)
@@ -164,11 +171,12 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
       <div className="draw-tools">
         {(on || overlay) && showPen && (
           <div className="draw-pop">
-            {COLORS.map((c, i) => <button key={c} type="button" className={`swatch${c === color ? ' sel' : ''}`} style={{ background: c }} onClick={() => setColor(c)} aria-label={`Pen ${NAMES[i]}`} aria-pressed={c === color} title={NAMES[i]} />)}
+            {COLORS.map((c, i) => <button key={c} type="button" className={`swatch${c === color ? ' sel' : ''}`} style={{ background: c }} onClick={() => { setColor(c); if (T?.event && sharing) T.event.emit('iris-color', c) }} aria-label={`Pen ${NAMES[i]}`} aria-pressed={c === color} title={NAMES[i]} />)}
             <span className="pen-name">{NAMES[COLORS.indexOf(color)]}</span>
             <button className="btn btn-ghost sm" onClick={clear}>Clear</button>
           </div>
         )}
+        {sharing && <button type="button" className="btn btn-danger sm stop-share" onClick={() => localParticipant.setScreenShareEnabled(false)}>Stop sharing</button>}
         <IconBtn short="Draw" label={canUse ? 'Draw on the shared screen' : 'Draw (available once a screen is shared)'} active={on || overlay} disabled={!canUse} onClick={toggle}><Pencil {...ICON} />{(on || overlay) && <span className="pen-dot" style={{ background: color }} />}</IconBtn>
       </div>
     </>

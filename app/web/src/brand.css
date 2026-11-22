@@ -142,7 +142,7 @@ input.field::placeholder { color: #8a8a8a; }
 .ibtn.sm { width: 30px; height: 30px; background: transparent; }
 .ibadge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #d93025; color: #fff; font: 700 11px/18px system-ui; text-align: center; }
 .draw-tools { position: relative; display: flex; align-items: center; }
-.draw-pop { position: absolute; bottom: 84px; right: 0; display: flex; gap: 8px; align-items: center; background: #1a1a1a; padding: 8px 10px; border-radius: 12px; border: 1px solid #2c2c2c; }
+.draw-pop { position: absolute; z-index: 60; bottom: 84px; right: 0; display: flex; gap: 8px; align-items: center; background: #1a1a1a; padding: 8px 10px; border-radius: 12px; border: 1px solid #2c2c2c; }
 .draw-tools .draw-hint { position: absolute; bottom: 84px; right: 0; white-space: nowrap; }
 .react-wrap { position: relative; }
 .react-bar { position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); }

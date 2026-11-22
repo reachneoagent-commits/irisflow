@@ -14,6 +14,7 @@ struct Saved(Mutex<Option<(PhysicalPosition<i32>, PhysicalSize<u32>)>>);
 fn share_mode(app: tauri::AppHandle, on: bool) -> Result<(), String> {
     let main = app.get_webview_window("main").ok_or("no main window")?;
     let saved = app.state::<Saved>();
+    eprintln!("[irisflow] share_mode on={on}");
     if on {
         if app.get_webview_window("overlay").is_none() {
             let m = app.primary_monitor().map_err(|e| e.to_string())?.ok_or("no monitor")?;
@@ -69,6 +70,10 @@ fn overlay_pen(app: tauri::AppHandle, on: bool) -> Result<bool, String> {
     app.emit("iris-pen-state", on).map_err(|e| e.to_string())?;
     Ok(on)
 }
+
+// Debug trail: the pages write what they see to the terminal the app was started from.
+#[tauri::command]
+fn log_line(msg: String) { eprintln!("[irisflow] {msg}"); }
 
 // Server address: IRISFLOW_URL at run time, else the one set when the app was built, else local dev.
 fn site_url(app: &tauri::AppHandle, path: &str) -> tauri::Result<tauri::Url> {
@@ -143,7 +148,7 @@ fn main() {
             app.deep_link().on_open_url(move |e| open_link(&h, e.urls()));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![share_mode, overlay_pen])
+        .invoke_handler(tauri::generate_handler![share_mode, overlay_pen, log_line])
         .run(tauri::generate_context!())
         .expect("error while running Irisflow");
 }
