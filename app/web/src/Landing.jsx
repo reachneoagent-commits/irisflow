@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Video, LogIn } from 'lucide-react'
 import Brand from './Brand.jsx'
 import { setGrant } from './grant.js'
+import { reloginIfExpired } from './session.js'
 
 // Accepts a bare code or a full meeting link.
 function parseCode(v) {
@@ -36,7 +37,10 @@ export default function Landing({ go }) {
       const { room, hostGrant } = await r.json()
       setGrant(room, hostGrant)
       go(`/r/${room}`)
-    } catch { setErr('Could not start a meeting. Try again.'); setBusy(false) }
+    } catch {
+      if (await reloginIfExpired()) return
+      setErr('Could not start a meeting. Try again.'); setBusy(false)
+    }
   }
   const join = async (e) => {
     e.preventDefault()
@@ -57,7 +61,7 @@ export default function Landing({ go }) {
     <div className="page">
       <header className="landing-head">
         <Brand />
-        {location.protocol === 'https:' && <a className="btn btn-link" href="/cdn-cgi/access/logout">Sign out</a>}
+        {location.protocol === 'https:' && <a className="btn btn-link" href={`/cdn-cgi/access/logout?returnTo=${encodeURIComponent(location.origin + '/')}`} onClick={async (e) => { e.preventDefault(); if (await reloginIfExpired()) return; location.href = e.currentTarget.href }}>Sign out</a>}
       </header>
       <div className="center">
         {view === 'home' ? (
