@@ -12,3 +12,12 @@ export async function reloginIfExpired() {
   }
   return false
 }
+
+// Last-resort fix when the app is stuck: forget everything this app saved (cached files, settings),
+// then sign out of Cloudflare, which also removes its sign-in cookie. The person signs in again.
+export async function clearSavedData() {
+  try { localStorage.clear(); sessionStorage.clear() } catch { /* blocked: carry on */ }
+  try { for (const k of await caches.keys()) await caches.delete(k) } catch { /* no cache API */ }
+  try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister() } catch { /* none */ }
+  location.href = `/cdn-cgi/access/logout?returnTo=${encodeURIComponent(location.origin + '/')}`
+}

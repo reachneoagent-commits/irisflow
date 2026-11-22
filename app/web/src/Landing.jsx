@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Video, LogIn } from 'lucide-react'
 import Brand from './Brand.jsx'
 import { setGrant } from './grant.js'
-import { reloginIfExpired } from './session.js'
+import { reloginIfExpired, clearSavedData } from './session.js'
 
 // Accepts a bare code or a full meeting link.
 function parseCode(v) {
@@ -18,6 +18,7 @@ export default function Landing({ go }) {
   const [busy, setBusy] = useState(false)
   const [needInvite, setNeedInvite] = useState(false)
   const [invite, setInvite] = useState('')
+  const [confirmClear, setConfirmClear] = useState(false)
   const saveInvite = (v) => {
     setInvite(v)
     try { localStorage.setItem('irisflow-invite', v.trim()) } catch { /* private mode */ }
@@ -61,7 +62,18 @@ export default function Landing({ go }) {
     <div className="page">
       <header className="landing-head">
         <Brand />
-        {location.protocol === 'https:' && <a className="btn btn-link" href={`/cdn-cgi/access/logout?returnTo=${encodeURIComponent(location.origin + '/')}`} onClick={async (e) => { e.preventDefault(); if (await reloginIfExpired()) return; location.href = e.currentTarget.href }}>Sign out</a>}
+        {location.protocol === 'https:' && (
+          <div className="head-actions">
+            {confirmClear ? <>
+              <span className="head-note">Sign out and clear saved data?</span>
+              <button className="btn btn-primary" onClick={clearSavedData}>Yes, clear</button>
+              <button className="btn btn-link" onClick={() => setConfirmClear(false)}>Cancel</button>
+            </> : <>
+              <button className="btn btn-link" onClick={() => setConfirmClear(true)} title="Use this if the app is stuck or shows errors">Clear saved data</button>
+              <a className="btn btn-link" href={`/cdn-cgi/access/logout?returnTo=${encodeURIComponent(location.origin + '/')}`} onClick={async (e) => { e.preventDefault(); if (await reloginIfExpired()) return; location.href = e.currentTarget.href }}>Sign out</a>
+            </>}
+          </div>
+        )}
       </header>
       <div className="center">
         {view === 'home' ? (

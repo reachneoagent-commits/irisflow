@@ -446,4 +446,6 @@ input, select, textarea, .lk-form-control { font-size: 16px; }
 }
 
 .landing-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.head-note { color: #cfcfcf; font-size: 14px; }
 a.btn-link { text-decoration: none; }
