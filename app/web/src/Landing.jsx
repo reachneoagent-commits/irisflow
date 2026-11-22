@@ -2,8 +2,6 @@ import React, { useState } from 'react'
 import { Video, LogIn } from 'lucide-react'
 import Brand from './Brand.jsx'
 import { setGrant } from './grant.js'
-import welcome from './art/welcome.svg'
-import Credit from './Credit.jsx'
 
 // Accepts a bare code or a full meeting link.
 function parseCode(v) {
@@ -13,6 +11,7 @@ function parseCode(v) {
 }
 
 export default function Landing({ go }) {
+  const [view, setView] = useState('home') // home | join
   const [code, setCode] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -52,27 +51,50 @@ export default function Landing({ go }) {
     setBusy(false)
     go(`/r/${c}`)
   }
+  const show = (v) => { setView(v); setErr('') }
+
   return (
     <div className="page">
       <header><Brand /></header>
-      <div className="center hero">
-        <div className="card">
-          <h1>Video meetings, free and open.</h1>
-          <p>Start a meeting and share the link. Guests join from the browser with nothing to install.</p>
-          {needInvite && <label className="flabel" htmlFor="invite">Invite code <em>required to start a meeting</em></label>}
-          {needInvite && <input id="invite" className="field" type="password" aria-label="Invite code" placeholder="Invite code" autoComplete="off" value={invite} onChange={(e) => { saveInvite(e.target.value); setErr('') }} />}
-          <button className="btn btn-primary" onClick={create} disabled={busy}><Video size={20} /> {busy ? 'Starting…' : 'New meeting'}</button>
-          <div className="or">or join with a code</div>
-          <label className="flabel" htmlFor="code">Meeting code or link</label>
-          <form className="row" onSubmit={join}>
-            <input id="code" className="field" aria-label="Meeting code or link" placeholder="abc-defg-hij" value={code} onChange={(e) => { setCode(e.target.value); setErr('') }} />
-            <button className="btn btn-ghost" disabled={busy}><LogIn size={18} /> Join</button>
+      <div className="center">
+        {view === 'home' ? (
+          <div className="home-wrap">
+            <h1>What would you like to do?</h1>
+            <p className="lead">Start a new meeting, or join one you've been invited to.</p>
+            {needInvite && <>
+              <label className="flabel" htmlFor="invite">Invite code <em>required to start a meeting</em></label>
+              <input id="invite" className="field" type="password" aria-label="Invite code" placeholder="Invite code" autoComplete="off" value={invite} onChange={(e) => { saveInvite(e.target.value); setErr('') }} />
+            </>}
+            <div className="home-cards">
+              <div className="hcard">
+                <div className="tile solid"><Video size={24} /></div>
+                <h2>Start a meeting</h2>
+                <p>Get a meeting code and link to share with friends and family.</p>
+                <button className="btn btn-primary" onClick={create} disabled={busy}>{busy ? 'Starting…' : 'Start a meeting'}</button>
+              </div>
+              <div className="hcard">
+                <div className="tile line"><LogIn size={24} /></div>
+                <h2>Join a meeting</h2>
+                <p>Have a code or link? Enter it to ask to join.</p>
+                <button className="btn btn-secondary" onClick={() => show('join')} disabled={busy}>Join a meeting</button>
+              </div>
+            </div>
+            {err && <div className="error" role="alert">{err}</div>}
+          </div>
+        ) : (
+          <form className="narrow" onSubmit={join} noValidate>
+            <h1>Join a meeting</h1>
+            <p className="lead">Paste the meeting link or type the code the host gave you.</p>
+            <label className="flabel" htmlFor="code">Meeting code or link</label>
+            <input id="code" className={`field${err ? ' bad' : ''}`} placeholder="abc-defg-hij" autoComplete="off" autoFocus value={code} onChange={(e) => { setCode(e.target.value); setErr('') }} />
+            {err && <div className="error" role="alert">{err}</div>}
+            <div className="acts">
+              <button className="btn btn-primary" disabled={busy}>{busy ? 'Checking…' : 'Continue'}</button>
+              <button type="button" className="btn btn-link" onClick={() => show('home')}>Back</button>
+            </div>
           </form>
-          {err && <div className="error" role="alert">{err}</div>}
-        </div>
-        <img className="hero-art" src={welcome} alt="" />
+        )}
       </div>
-      <Credit />
     </div>
   )
 }

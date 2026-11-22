@@ -1,15 +1,80 @@
-import meetingArt from './art/meeting.svg'
 import leftArt from './art/left.svg'
 import Credit from './Credit.jsx'
-import { RotateCcw, Home, X } from 'lucide-react'
+import { RotateCcw, Home, X, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 import React, { useState, useEffect, useRef } from 'react'
-import { LiveKitRoom, PreJoin, RoomAudioRenderer } from '@livekit/components-react'
+import { LiveKitRoom, usePreviewTracks, RoomAudioRenderer } from '@livekit/components-react'
 import Brand from './Brand.jsx'
 import MeetingView from './MeetingView.jsx'
-import { InviteCard } from './Invite.jsx'
+import { copyText } from './Invite.jsx'
 import { getGrant } from './grant.js'
 
-const LK_URL = import.meta.env.VITE_LIVEKIT_URL || `ws://${location.hostname}:7880`
+const LK_URL = import.meta.env.VITE_LIVEKIT_URL
+  || (location.protocol === 'https:' ? `wss://${location.host}` : `ws://${location.hostname}:7880`)
+function PreJoinPanel({ code, isHost, onSubmit, onBack, err, setErr }) {
+  const [name, setName] = useState('')
+  const [nameErr, setNameErr] = useState(false)
+  const [mic, setMic] = useState(true)
+  const [cam, setCam] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const [blocked, setBlocked] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const videoRef = useRef(null)
+  const tracks = usePreviewTracks({ audio: mic, video: cam }, () => { setBlocked(true); setMic(false); setCam(false); setErr('Camera or microphone is blocked. Allow access in your browser, then reload.') })
+  const vt = tracks?.find((t) => t.kind === 'video')
+  const at = tracks?.find((t) => t.kind === 'audio')
+  useEffect(() => {
+    const el = videoRef.current
+    if (!vt || !el) return
+    vt.attach(el)
+    return () => { vt.detach(el) }
+  }, [vt])
+  const link = `${location.origin}/r/${code}`
+  const copy = async () => { await copyText(link); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  const submit = (e) => {
+    e.preventDefault()
+    if (!name.trim()) { setNameErr(true); return }
+    setBusy(true)
+    onSubmit({
+      username: name.trim(), videoEnabled: cam && !blocked, audioEnabled: mic && !blocked,
+      videoDeviceId: vt?.mediaStreamTrack.getSettings().deviceId, audioDeviceId: at?.mediaStreamTrack.getSettings().deviceId,
+    })
+  }
+  const initial = (name.trim()[0] || '?').toUpperCase()
+  return (
+    <form className="pre" onSubmit={submit} noValidate>
+      <div>
+        <div className="pre-video">
+          <video ref={videoRef} muted playsInline autoPlay style={{ display: cam && vt ? 'block' : 'none' }} />
+          {!(cam && vt) && <div className="off"><div className="avatar">{initial}</div></div>}
+        </div>
+        <div className="tgrow">
+          <button type="button" className={`tg${mic ? '' : ' off'}`} aria-pressed={mic} onClick={() => { setMic(!mic); setBlocked(false); setErr('') }}>
+            {mic ? <Mic size={20} /> : <MicOff size={20} />}<span>Microphone<small>{mic ? 'On' : 'Off'}</small></span>
+          </button>
+          <button type="button" className={`tg${cam ? '' : ' off'}`} aria-pressed={cam} onClick={() => { setCam(!cam); setBlocked(false); setErr('') }}>
+            {cam ? <Video size={20} /> : <VideoOff size={20} />}<span>Camera<small>{cam ? 'On' : 'Off'}</small></span>
+          </button>
+        </div>
+      </div>
+      <div className="pre-side">
+        <h1>{isHost ? 'Ready to start?' : 'Ready to join?'}</h1>
+        <p className="lead">{isHost ? 'Check how you look and sound, then start.' : 'Check how you look and sound, then ask to join.'}</p>
+        {isHost
+          ? <div className="code-card"><div className="k">Meeting code</div><div className="r"><span className="v">{code}</span><button type="button" className="btn btn-secondary" onClick={copy}>{copied ? 'Copied' : 'Copy link'}</button></div></div>
+          : <div className="gnote">You're joining <strong>{code}</strong>. The host will let you in.</div>}
+        <label className="flabel" htmlFor="pj-name">Your name</label>
+        <input id="pj-name" className={`field${nameErr ? ' bad' : ''}`} placeholder="Enter your name" autoComplete="name" value={name} onChange={(e) => { setName(e.target.value); setNameErr(false); setErr('') }} />
+        {nameErr && <div className="error" role="alert">Enter your name so others know who you are.</div>}
+        {err && <div className="error" role="alert">{err}</div>}
+        <div className="acts">
+          <button className="btn btn-primary" disabled={busy && !err}>{busy && !err ? 'Please wait…' : isHost ? 'Start now' : 'Ask to join'}</button>
+          <button type="button" className="btn btn-link" onClick={onBack}>Back</button>
+        </div>
+      </div>
+    </form>
+  )
+}
+
 const post = (path, body) => fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
 
 export default function Room({ code, onLeave }) {
@@ -98,24 +163,9 @@ export default function Room({ code, onLeave }) {
   if (stage === 'prejoin') return (
     <div className="page">
       <header><Brand /></header>
-      <div className="center hero prejoin" data-lk-theme="default">
-        <div className="card">
-          {grant
-            ? <InviteCard code={code} isHost />
-            : <div className="guest-note">You're joining meeting <strong>{code}</strong>. The host will let you in.</div>}
-          <h2 style={{ margin: '4px 0 0' }}>Ready to join?</h2>
-          <PreJoin
-            defaults={{ username: '', videoEnabled: true, audioEnabled: true }}
-            onSubmit={join}
-            onError={() => setErr('Camera or microphone is blocked. Allow access and reload.')}
-            joinLabel={grant ? 'Join now' : 'Ask to join'}
-            userLabel="Your name"
-          />
-          {err && <div className="error" role="alert">{err}</div>}
-        </div>
-        <img className="hero-art" src={meetingArt} alt="" />
+      <div className="center">
+        <PreJoinPanel code={code} isHost={!!grant} onSubmit={join} onBack={onLeave} err={err} setErr={setErr} />
       </div>
-      <Credit />
     </div>
   )
 
