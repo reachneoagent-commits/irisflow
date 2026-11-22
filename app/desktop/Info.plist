@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSCameraUsageDescription</key>
+  <string>Irisflow uses your camera so others in the meeting can see you.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Irisflow uses your microphone so others in the meeting can hear you.</string>
+</dict>
+</plist>
