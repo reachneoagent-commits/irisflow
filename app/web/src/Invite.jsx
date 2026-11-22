@@ -3,7 +3,7 @@ import { Link2, Copy, Check } from 'lucide-react'
 import { IconBtn, ICON, toast } from './ui.jsx'
 
 const linkFor = (code) => `${location.origin}/r/${code}`
-async function copyText(text) {
+export async function copyText(text) {
   try { await navigator.clipboard.writeText(text) } catch { toast(`Couldn't copy automatically. Link: ${text}`, 'error') }
 }
 
