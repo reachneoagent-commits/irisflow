@@ -55,7 +55,10 @@ export default function Landing({ go }) {
 
   return (
     <div className="page">
-      <header><Brand /></header>
+      <header className="landing-head">
+        <Brand />
+        {location.protocol === 'https:' && <a className="btn btn-link" href="/cdn-cgi/access/logout">Sign out</a>}
+      </header>
       <div className="center">
         {view === 'home' ? (
           <div className="home-wrap">

@@ -433,3 +433,17 @@ input, select, textarea, .lk-form-control { font-size: 16px; }
   .narrow h1, .home-wrap h1 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) { .tg { transition: none; transform: none !important; } .hcard, .tg:hover { transform: none; } }
+
+/* Camera-off tile: soft-tint letter circle in the brand font */
+.lk-participant-placeholder svg { display: none; }
+.lk-participant-placeholder { background: transparent; }
+.lk-participant-placeholder::after {
+  content: var(--initial, '');
+  width: clamp(48px, 28%, 96px); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(229,254,83,.14); border: 1.5px solid #E5FE53; color: #E5FE53;
+  font-family: var(--font-display); font-weight: 600; font-size: clamp(22px, 3.2vw, 40px); line-height: 1;
+}
+
+.landing-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+a.btn-link { text-decoration: none; }
