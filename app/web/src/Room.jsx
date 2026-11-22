@@ -26,7 +26,11 @@ function PreJoinPanel({ code, isHost, onSubmit, onBack, err, setErr }) {
     const el = videoRef.current
     if (!vt || !el) return
     vt.attach(el)
-    return () => { vt.detach(el) }
+    // The desktop app's webview (WKWebView) can leave the preview paused; start it explicitly.
+    const start = () => { el.play().catch(() => {}) }
+    start()
+    el.addEventListener('loadedmetadata', start)
+    return () => { el.removeEventListener('loadedmetadata', start); vt.detach(el) }
   }, [vt])
   const link = `${location.origin}/r/${code}`
   const copy = async () => { await copyText(link); setCopied(true); setTimeout(() => setCopied(false), 2000) }
