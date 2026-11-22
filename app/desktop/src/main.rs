@@ -41,7 +41,10 @@ fn open_main(app: &tauri::AppHandle) -> tauri::Result<()> {
         .or_else(|| option_env!("IRISFLOW_URL").map(String::from))
         .filter(|u| !u.is_empty())
         .unwrap_or_else(|| "http://localhost:5173".into());
-    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().map_err(|_| tauri::Error::InvalidWebviewUrl("bad IRISFLOW_URL"))?))
+    // The app version rides on the address so a new installer never shows a page the webview saved earlier.
+    let mut url: tauri::Url = url.parse().map_err(|_| tauri::Error::InvalidWebviewUrl("bad IRISFLOW_URL"))?;
+    url.query_pairs_mut().append_pair("app", &app.package_info().version.to_string());
+    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
         .title("Irisflow")
         .inner_size(w.max(360.0), h.max(560.0))
         .min_inner_size(360.0, 560.0)
