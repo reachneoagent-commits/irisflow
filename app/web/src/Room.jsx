@@ -32,7 +32,7 @@ function PreJoinPanel({ code, isHost, onSubmit, onBack, err, setErr }) {
     el.addEventListener('loadedmetadata', start)
     return () => { el.removeEventListener('loadedmetadata', start); vt.detach(el) }
   }, [vt])
-  const link = `${location.origin}/r/${code}`
+  const link = `${location.origin}/s/${code}`
   const copy = async () => { await copyText(link); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const submit = (e) => {
     e.preventDefault()

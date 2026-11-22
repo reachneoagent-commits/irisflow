@@ -11,6 +11,13 @@
 		reverse_proxy 127.0.0.1:7880
 	}
 
+	# Public share page (link previews). Cloudflare Access bypasses this path; it holds no meeting data.
+	handle /s/* {
+		rewrite * /s.html
+		root * /srv/web
+		file_server
+	}
+
 	handle {
 		root * /srv/web
 		try_files {path} /index.html
