@@ -2,6 +2,10 @@
 :80 {
 	encode zstd gzip
 
+	# Never serve a stale page from the app's webview cache: the page must be re-checked with Cloudflare Access.
+	@pages not path /assets/* /fonts/* /brand/*
+	header @pages Cache-Control "no-cache"
+
 	handle /api/* {
 		reverse_proxy 127.0.0.1:8787
 	}
