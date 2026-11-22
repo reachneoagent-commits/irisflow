@@ -9,7 +9,7 @@ import { copyText } from './Invite.jsx'
 import { getGrant } from './grant.js'
 
 const LK_URL = import.meta.env.VITE_LIVEKIT_URL
-  || (location.protocol === 'https:' ? `wss://${location.host}` : `ws://${location.hostname}:7880`)
+  || (location.protocol === 'https:' ? `wss://${location.host}/lk` : `ws://${location.hostname}:7880`)
 function PreJoinPanel({ code, isHost, onSubmit, onBack, err, setErr }) {
   const [name, setName] = useState('')
   const [nameErr, setNameErr] = useState(false)
