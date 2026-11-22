@@ -66,7 +66,9 @@ function PreJoinPanel({ code, isHost, onSubmit, onBack, err, setErr }) {
         <p className="lead">{isHost ? 'Check how you look and sound, then start.' : 'Check how you look and sound, then ask to join.'}</p>
         {isHost
           ? <div className="code-card"><div className="k">Meeting code</div><div className="r"><span className="v">{code}</span><button type="button" className="btn btn-secondary" onClick={copy}>{copied ? 'Copied' : 'Copy link'}</button></div></div>
-          : <div className="gnote">You're joining <strong>{code}</strong>. The host will let you in.</div>}
+          : <div className="gnote">You're joining <strong>{code}</strong>. The host will let you in.
+            {typeof window !== 'undefined' && !window.__TAURI__ && /Mac|Win/.test(navigator.platform || '') && <> <a className="btn-link-inline" href={`irisflow://r/${code}`}>Open in the Irisflow app</a></>}
+          </div>}
         <label className="flabel" htmlFor="pj-name">Your name</label>
         <input id="pj-name" className={`field${nameErr ? ' bad' : ''}`} placeholder="Enter your name" autoComplete="name" value={name} onChange={(e) => { setName(e.target.value); setNameErr(false); setErr('') }} />
         {nameErr && <div className="error" role="alert">Enter your name so others know who you are.</div>}

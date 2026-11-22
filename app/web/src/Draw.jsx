@@ -7,8 +7,8 @@ import { IconBtn, ICON, toast } from './ui.jsx'
 // Presenter pen. Strokes are sent as normalised points (0..1 of the shared screen)
 // on the "draw" data topic. Viewers render them over the shared-screen video and they fade out.
 const enc = new TextEncoder(), dec = new TextDecoder()
-const COLORS = ['#E5FE53', '#ff4d4d', '#4da3ff', '#ffffff']
-const NAMES = ['Yellow', 'Red', 'Blue', 'White']
+const COLORS = ['#000000', '#ff4d4d', '#4da3ff', '#ffffff']
+const NAMES = ['Black', 'Red', 'Blue', 'White']
 const FADE_AFTER = 5000, FADE_FOR = 1200
 const MAX_STROKES = 200, MAX_POINTS = 2000
 
@@ -25,14 +25,21 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
   const canvas = useRef(null)
   const strokes = useRef(new Map())          // key -> { c, pts, last }
   const [on, setOn] = useState(false)
-  const [color, setColor] = useState(COLORS[0])
+  const [color, setColor] = useState(COLORS[1])
   const { localParticipant, isScreenShareEnabled: sharing } = useLocalParticipant()
   const mine = useRef(null)
+  const sharingRef = useRef(false)
+  sharingRef.current = sharing
 
   const { send } = useDataChannel('draw', (msg) => {
     // Anyone in the call can mark up a screen that is being shared; nothing to draw on otherwise.
     if (!sharerId || !msg.from) return
-    try { apply(msg.from.identity, JSON.parse(dec.decode(msg.payload))) } catch { /* ignore */ }
+    try {
+      const m = JSON.parse(dec.decode(msg.payload))
+      apply(msg.from.identity, m)
+      // Desktop presenter: show other people's marks on the real screen too.
+      if (window.__TAURI__?.event && sharingRef.current) window.__TAURI__.event.emit('iris-remote', { who: msg.from.identity, m })
+    } catch { /* ignore */ }
   })
 
   const apply = (who, m) => {
@@ -72,10 +79,15 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
             const age = now - s.last - FADE_AFTER
             if (age > FADE_FOR) { strokes.current.delete(k); continue }
             g.globalAlpha = age > 0 ? 1 - age / FADE_FOR : 1
-            g.strokeStyle = s.c; g.beginPath()
-            s.pts.forEach(([x, y], i) => (i ? g.lineTo(cr.x + x * cr.w, cr.y + y * cr.h) : g.moveTo(cr.x + x * cr.w, cr.y + y * cr.h)))
-            if (s.pts.length === 1) g.lineTo(cr.x + s.pts[0][0] * cr.w + 0.1, cr.y + s.pts[0][1] * cr.h)
-            g.stroke()
+            const path = () => {
+              g.beginPath()
+              s.pts.forEach(([x, y], i) => (i ? g.lineTo(cr.x + x * cr.w, cr.y + y * cr.h) : g.moveTo(cr.x + x * cr.w, cr.y + y * cr.h)))
+              if (s.pts.length === 1) g.lineTo(cr.x + s.pts[0][0] * cr.w + 0.1, cr.y + s.pts[0][1] * cr.h)
+            }
+            if (s.c === '#000000' || s.c === '#ffffff') { // outline so black and white show on any background
+              const w = g.lineWidth; g.lineWidth = w + 3; g.strokeStyle = s.c === '#000000' ? '#ffffff' : '#000000'; path(); g.stroke(); g.lineWidth = w
+            }
+            g.strokeStyle = s.c; path(); g.stroke()
           }
         }
       }
@@ -88,18 +100,24 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
   const emit = useCallback((m) => send(enc.encode(JSON.stringify(m)), { reliable: false }), [send])
   // Desktop app: the pen is a transparent window over the real screen; it hands us strokes to publish.
   const T = typeof window !== 'undefined' ? window.__TAURI__ : null
-  const [overlay, setOverlay] = useState(false)
+  const [overlay, setOverlay] = useState(false) // the presenter's pen is on (desktop)
   useEffect(() => {
     if (!T?.event) return
     let un
-    T.event.listen('iris-draw', (e) => emit(e.payload)).then((f) => { un = f })
+    T.event.listen('iris-pen-state', (e) => setOverlay(!!e.payload)).then((f) => { un = f })
     return () => un && un()
-  }, [T, emit])
+  }, [T])
+  // Desktop: while this person shares their screen, shrink to a control window and open the marks layer.
+  useEffect(() => {
+    if (!T?.core) return
+    T.core.invoke('share_mode', { on: !!sharing }).catch(() => {})
+    return () => { if (sharing) T.core.invoke('share_mode', { on: false }).catch(() => {}) }
+  }, [T, sharing])
   const say = (text, kind) => toast(text, kind)
   const toggle = async () => {
     if (!sharerId && !sharing) return // button is disabled in this state
-    if (!T?.core || (!sharing && sharerId)) { setOn(!on); return }
-    try { setOverlay(await T.core.invoke('overlay_toggle')) }
+    if (!T?.core || !sharing) { setOn(!on); return }
+    try { await T.core.invoke('overlay_pen', { on: !overlay }) }
     catch (e) { say('Could not open the drawing layer: ' + (e?.message || e), 'error') }
   }
   const pending = useRef([])
@@ -135,8 +153,6 @@ export default function Draw({ hostRef, host, sharerId, canDraw }) {
   // Available while anyone is sharing. Local strokes are keyed by the local identity.
   const canUse = !!(sharing || sharerId)
   const showPen = canDraw && canUse
-  // Sharing ended while the desktop pen layer was open: close it.
-  useEffect(() => { if (!canUse && overlay && T?.core) T.core.invoke('overlay_toggle').then(setOverlay).catch(() => {}) }, [canUse, overlay])
   useEffect(() => { if (!showPen) setOn(false) }, [showPen])
 
   const surface = host && createPortal(

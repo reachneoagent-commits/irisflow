@@ -1,40 +1,59 @@
 <!doctype html><meta charset="utf-8"><title>Irisflow drawing</title>
 <style>
 html,body{margin:0;height:100%;background:transparent;overflow:hidden;font:14px system-ui}
-canvas{position:fixed;inset:0;cursor:crosshair}
-#bar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:#000;color:#fff;border:1px solid #333;border-radius:999px;padding:8px 12px}
+canvas{position:fixed;inset:0}
+body.pen canvas{cursor:crosshair}
+#bar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:none;gap:8px;align-items:center;background:#000;color:#fff;border:1px solid #333;border-radius:999px;padding:8px 12px}
+body.pen #bar{display:flex}
 #bar button{font:inherit;border:0;border-radius:999px;padding:6px 12px;background:#222;color:#fff;cursor:pointer}
-#bar .sw{width:22px;height:22px;padding:0;border-radius:50%}
+#bar .sw{width:22px;height:22px;padding:0;border-radius:50%;border:1px solid #666}
 #bar .done{background:#E5FE53;color:#000}
 </style>
 <canvas id=c></canvas>
 <div id=bar></div>
 <script>
-const COLORS=['#E5FE53','#ff4d4d','#4da3ff','#ffffff'], FADE_AFTER=5000, FADE_FOR=1200;
+// Transparent layer over the shared screen. Always shows what everyone draws (clicks pass through).
+// While the presenter's pen is on, it catches the mouse so they can draw too.
+const COLORS=['#000000','#ff4d4d','#4da3ff','#ffffff'], NAMES=['Black','Red','Blue','White'], FADE_AFTER=5000, FADE_FOR=1200;
 const cv=document.getElementById('c'), g=cv.getContext('2d'), bar=document.getElementById('bar');
-const T=window.__TAURI__; let color=COLORS[0], strokes=[], cur=null, pending=[], tick=null;
+const T=window.__TAURI__; let color=COLORS[1], strokes=new Map(), cur=null, pending=[], tick=null, pen=false;
 function size(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio}
 size(); addEventListener('resize',size);
 function emit(m){T.event.emit('iris-draw',m)}
 function rid(){return Math.random().toString(36).slice(2,8)}
 function btn(t,cls,fn){const b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;b.onclick=fn;bar.append(b);return b}
-function render(){
-  COLORS.forEach(c=>{const b=btn('','sw',()=>{color=c;render()});b.style.background=c;b.style.outline=c===color?'2px solid #fff':'none'});
+function build(){
+  bar.innerHTML='';
+  COLORS.forEach((c,i)=>{const b=btn('','sw',()=>{color=c;build()});b.title=NAMES[i];b.setAttribute('aria-label','Pen '+NAMES[i]);b.style.background=c;b.style.outline=c===color?'2px solid #E5FE53':'none';b.style.outlineOffset='2px'});
+  btn('Clear','',()=>{for(const k of [...strokes.keys()])if(k.startsWith('me:'))strokes.delete(k);emit({t:'clear'})});
+  btn('Done','done',endPen);
 }
-function build(){bar.innerHTML='';render();btn('Clear','',()=>{strokes=[];emit({t:'clear'})});btn('Done','done',()=>T.core.invoke('overlay_toggle'))}
+function endPen(){T.core.invoke('overlay_pen',{on:false})}
 build();
-function flush(){if(cur&&pending.length){emit({t:'s',id:cur.id,c:color,p:pending});pending=[]}}
+T.event.listen('iris-pen-state',e=>{pen=!!e.payload;document.body.classList.toggle('pen',pen)});
+// Strokes drawn by other people arrive from the meeting window, already normalised to the screen.
+T.event.listen('iris-remote',e=>{
+  const {who,m}=e.payload||{};
+  if(m.t==='clear'){for(const k of [...strokes.keys()])if(k.startsWith(who+':'))strokes.delete(k);return}
+  if(typeof m.id!=='string'||!Array.isArray(m.p))return;
+  const key=who+':'+m.id; let s=strokes.get(key);
+  if(!s){if(strokes.size>200)strokes.delete(strokes.keys().next().value);s={c:COLORS.includes(m.c)?m.c:COLORS[1],pts:[],last:0};strokes.set(key,s)}
+  for(let i=0;i+1<m.p.length&&s.pts.length<2000;i+=2){const x=+m.p[i],y=+m.p[i+1];if(x>=0&&x<=1&&y>=0&&y<=1)s.pts.push([x,y])}
+  s.last=performance.now();
+});
+function flush(){if(cur&&pending.length){emit({t:'s',id:cur.id,c:cur.c,p:pending});pending=[]}}
 function pt(e){return [+(e.clientX/innerWidth).toFixed(4),+(e.clientY/innerHeight).toFixed(4)]}
-cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);cur={id:rid(),c:color,pts:[],last:performance.now()};strokes.push(cur);const p=pt(e);cur.pts.push(p);pending.push(...p);tick=setInterval(flush,40)};
+cv.onpointerdown=e=>{if(!pen)return;cv.setPointerCapture(e.pointerId);const id=rid();cur={id,c:color,pts:[],last:performance.now()};strokes.set('me:'+id,cur);const p=pt(e);cur.pts.push(p);pending.push(...p);tick=setInterval(flush,40)};
 cv.onpointermove=e=>{if(!cur)return;const p=pt(e);cur.pts.push(p);cur.last=performance.now();pending.push(...p)};
 cv.onpointerup=()=>{flush();clearInterval(tick);cur=null};
-addEventListener('keydown',e=>{if(e.key==='Escape')T.core.invoke('overlay_toggle')});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&pen)endPen()});
 (function loop(){
   g.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);g.clearRect(0,0,innerWidth,innerHeight);
-  g.lineCap='round';g.lineJoin='round';g.lineWidth=5;const now=performance.now();
-  strokes=strokes.filter(s=>now-s.last-FADE_AFTER<FADE_FOR||s===cur);
-  for(const s of strokes){const a=now-s.last-FADE_AFTER;g.globalAlpha=a>0&&s!==cur?1-a/FADE_FOR:1;g.strokeStyle=s.c;g.beginPath();
-    s.pts.forEach(([x,y],i)=>i?g.lineTo(x*innerWidth,y*innerHeight):g.moveTo(x*innerWidth,y*innerHeight));
-    if(s.pts.length===1)g.lineTo(s.pts[0][0]*innerWidth+.1,s.pts[0][1]*innerHeight);g.stroke()}
+  g.lineCap='round';g.lineJoin='round';const now=performance.now();
+  for(const [k,s] of strokes){const a=now-s.last-FADE_AFTER;if(a>FADE_FOR&&s!==cur){strokes.delete(k);continue}
+    g.globalAlpha=a>0&&s!==cur?1-a/FADE_FOR:1;
+    const path=()=>{g.beginPath();s.pts.forEach(([x,y],i)=>i?g.lineTo(x*innerWidth,y*innerHeight):g.moveTo(x*innerWidth,y*innerHeight));if(s.pts.length===1)g.lineTo(s.pts[0][0]*innerWidth+.1,s.pts[0][1]*innerHeight)};
+    if(s.c==='#000000'||s.c==='#ffffff'){g.lineWidth=8;g.strokeStyle=s.c==='#000000'?'#ffffff':'#000000';path();g.stroke()} // outline so black/white show on any background
+    g.lineWidth=5;g.strokeStyle=s.c;path();g.stroke()}
   requestAnimationFrame(loop)})();
 </script>
