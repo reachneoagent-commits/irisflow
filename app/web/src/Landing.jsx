@@ -3,13 +3,7 @@ import { Video, LogIn } from 'lucide-react'
 import Brand from './Brand.jsx'
 import { setGrant } from './grant.js'
 import { reloginIfExpired, clearSavedData } from './session.js'
-
-// Accepts a bare code or a full meeting link.
-function parseCode(v) {
-  const s = v.trim().toLowerCase()
-  const m = s.match(/([a-z0-9]+(?:-[a-z0-9]+)+)\/?$/)
-  return m ? m[1] : s.replace(/[^a-z0-9-]/g, '')
-}
+import { parseCode } from './code.js'
 
 export default function Landing({ go }) {
   const [view, setView] = useState('home') // home | join

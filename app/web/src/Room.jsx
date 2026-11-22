@@ -1,6 +1,7 @@
 import leftArt from './art/left.svg'
 import Credit from './Credit.jsx'
 import { RotateCcw, Home, X, Mic, MicOff, Video, VideoOff } from 'lucide-react'
+import { reloginIfExpired } from './session.js'
 import React, { useState, useEffect, useRef } from 'react'
 import { LiveKitRoom, usePreviewTracks, RoomAudioRenderer } from '@livekit/components-react'
 import Brand from './Brand.jsx'
@@ -102,18 +103,21 @@ export default function Room({ code, onLeave }) {
     setErr(''); setChoices(c)
     try {
       const r = await post('/api/join', { room: code, name: c.username || 'Guest', hostGrant: grant })
+      if (r.status === 404) { setStage('missing'); return }
+      if (r.status === 429) { setErr('Too many people are waiting to join. Ask the host to let some in, then try again.'); return }
       if (!r.ok) throw new Error()
       const d = await r.json()
       if (d.status === 'admitted') { setToken(d.token); setIsHost(d.host); setStage('call'); return }
       setStage('waiting')
       poll.current = setInterval(async () => {
-        const s = await fetch(`/api/join/status?room=${code}&requestId=${d.requestId}`)
-        const j = await s.json()
+        let j
+        try { j = await (await fetch(`/api/join/status?room=${code}&requestId=${d.requestId}`)).json() } catch { return } // brief network blip: keep waiting
         if (j.status === 'admitted') { clearInterval(poll.current); setToken(j.token); setIsHost(false); setStage('call') }
         else if (j.status === 'denied' || j.status === 'gone') { clearInterval(poll.current); setStage('denied') }
       }, 2000)
     } catch {
-      setErr('Could not join this meeting. Try again.')
+      if (await reloginIfExpired()) return
+      setErr(navigator.onLine ? 'Could not reach the meeting server. Try again in a moment.' : 'You are offline. Check your internet connection and try again.')
     }
   }
 
