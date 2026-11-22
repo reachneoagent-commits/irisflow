@@ -3,7 +3,7 @@ import { Track, RoomEvent } from 'livekit-client'
 import {
   CarouselLayout, Chat, ConnectionStateToast, DisconnectButton, FocusLayout,
   FocusLayoutContainer, GridLayout, LayoutContextProvider, ParticipantTile,
-  StartMediaButton, TrackToggle, isTrackReference, useCreateLayoutContext, usePinnedTracks, useTracks,
+  StartMediaButton, TrackToggle, isTrackReference, useMaybeTrackRefContext, useCreateLayoutContext, usePinnedTracks, useTracks,
   useChat,
 } from '@livekit/components-react'
 import { Users, MessageSquare, PhoneOff, X } from 'lucide-react'
@@ -14,6 +14,14 @@ import People, { useLobby } from './People.jsx'
 import Draw from './Draw.jsx'
 import DeviceMenu from './DeviceMenu.jsx'
 import MoreMenu, { useMedia } from './MoreMenu.jsx'
+
+// Camera-off tiles show the first letter of the person's name (styled in brand.css).
+function Tile(props) {
+  const ref = useMaybeTrackRefContext() || props.trackRef
+  const name = (ref?.participant?.name || ref?.participant?.identity || '').trim()
+  const letter = name ? Array.from(name)[0].toUpperCase() : ''
+  return <ParticipantTile {...props} style={{ position: 'relative', '--initial': JSON.stringify(letter) }} />
+}
 
 const same = (a, b) => a && b && a.participant.identity === b.participant.identity && a.source === b.source
 
@@ -80,12 +88,12 @@ export default function MeetingView({ code, grant, isHost }) {
         <div className="lk-video-conference-inner">
           <div className="draw-host" ref={setHostEl}>
           {!focus ? (
-            <div className="lk-grid-layout-wrapper"><GridLayout tracks={tracks}><ParticipantTile /></GridLayout></div>
+            <div className="lk-grid-layout-wrapper"><GridLayout tracks={tracks}><Tile /></GridLayout></div>
           ) : (
             <div className="lk-focus-layout-wrapper">
               <FocusLayoutContainer>
-                <CarouselLayout tracks={carousel}><ParticipantTile /></CarouselLayout>
-                <FocusLayout trackRef={focus} />
+                <CarouselLayout tracks={carousel}><Tile /></CarouselLayout>
+                <FocusLayout trackRef={focus} style={{ '--initial': JSON.stringify(Array.from((focus.participant.name || focus.participant.identity || '').trim())[0]?.toUpperCase() || '') }} />
               </FocusLayoutContainer>
             </div>
           )}
