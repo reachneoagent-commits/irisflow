@@ -19,12 +19,14 @@ export async function clearSavedData() {
   try { localStorage.clear(); sessionStorage.clear() } catch { /* blocked: carry on */ }
   try { for (const k of await caches.keys()) await caches.delete(k) } catch { /* no cache API */ }
   try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister() } catch { /* none */ }
-  location.href = logoutUrl()
+  await signOut()
 }
 
-// Ending only the app cookie lets Access sign straight back in from the team-domain session,
-// so chain through the team logout too (lands on Cloudflare's "logged out" page).
+// Ending only the app cookie lets Access sign straight back in from the team-domain session.
+// So clear the app cookie first (the response deletes it), then end the team session and come back:
+// the team logout page errors if it is the last stop, so it must return to the app.
 export const ACCESS_TEAM = 'https://sdprox.cloudflareaccess.com'
-export function logoutUrl() {
-  return `/cdn-cgi/access/logout?returnTo=${encodeURIComponent(ACCESS_TEAM + '/cdn-cgi/access/logout')}`
+export async function signOut() {
+  try { await fetch('/cdn-cgi/access/logout', { credentials: 'include', redirect: 'manual' }) } catch { /* carry on */ }
+  location.href = `${ACCESS_TEAM}/cdn-cgi/access/logout?returnTo=${encodeURIComponent(location.origin + '/')}`
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Video, LogIn } from 'lucide-react'
 import Brand from './Brand.jsx'
 import { setGrant } from './grant.js'
-import { reloginIfExpired, clearSavedData, logoutUrl } from './session.js'
+import { reloginIfExpired, clearSavedData, signOut } from './session.js'
 import { parseCode } from './code.js'
 
 export default function Landing({ go }) {
@@ -64,7 +64,7 @@ export default function Landing({ go }) {
               <button className="btn btn-link" onClick={() => setConfirmClear(false)}>Cancel</button>
             </> : <>
               <button className="btn btn-link" onClick={() => setConfirmClear(true)} title="Use this if the app is stuck or shows errors">Clear saved data</button>
-              <a className="btn btn-link" href={logoutUrl()}>Sign out</a>
+              <a className="btn btn-link" href="/" onClick={(e) => { e.preventDefault(); signOut() }}>Sign out</a>
             </>}
           </div>
         )}
