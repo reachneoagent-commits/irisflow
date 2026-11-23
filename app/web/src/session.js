@@ -22,11 +22,20 @@ export async function clearSavedData() {
   await signOut()
 }
 
-// Ending only the app cookie lets Access sign straight back in from the team-domain session.
-// So clear the app cookie first (the response deletes it), then end the team session and come back:
-// the team logout page errors if it is the last stop, so it must return to the app.
-export const ACCESS_TEAM = 'https://sdprox.cloudflareaccess.com'
+// Cloudflare's own logout works but ends on a page that says "Failed to log out" until refreshed.
+// So run it in a hidden frame, show our own "Signed out" message, then reload into the login page.
 export async function signOut() {
-  try { await fetch('/cdn-cgi/access/logout', { credentials: 'include', redirect: 'manual' }) } catch { /* carry on */ }
-  location.href = `${ACCESS_TEAM}/cdn-cgi/access/logout?returnTo=${encodeURIComponent(location.origin + '/')}`
+  const msg = document.createElement('div')
+  msg.setAttribute('role', 'status')
+  msg.textContent = 'Signing you out…'
+  msg.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#0b0b0d;color:#fff;font:600 18px system-ui,sans-serif'
+  const frame = document.createElement('iframe')
+  frame.style.cssText = 'position:absolute;width:0;height:0;border:0;opacity:0'
+  frame.src = '/cdn-cgi/access/logout'
+  msg.appendChild(frame)
+  document.body.appendChild(msg)
+  await new Promise((r) => setTimeout(r, 2500))
+  msg.firstChild.textContent = 'Signed out'
+  await new Promise((r) => setTimeout(r, 800))
+  location.replace('/')
 }
