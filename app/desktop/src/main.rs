@@ -1,10 +1,13 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+
+static PEN_ON: AtomicBool = AtomicBool::new(false);
 use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 // Where the main window was before sharing shrank it, so stopping the share puts it back.
 #[derive(Default)]
-struct Saved(Mutex<Option<(PhysicalPosition<i32>, PhysicalSize<u32>)>>);
+struct Saved(Mutex<Option<(PhysicalPosition<i32>, PhysicalSize<u32>, bool)>>);
 
 // Starting a screen share: the main window becomes a small always-on-top control window that is
 // hidden from screen capture (no "mirror inside a mirror"), and a transparent layer opens over the
@@ -29,15 +32,32 @@ fn share_mode(app: tauri::AppHandle, on: bool) -> Result<(), String> {
                 .shadow(false)
                 .content_protected(true)
                 .visible_on_all_workspaces(true)
+                .focused(false)
                 .position(pos.x as f64 / scale, pos.y as f64 / scale)
                 .inner_size(size.width as f64 / scale, size.height as f64 / scale)
                 .build()
                 .map_err(|e| e.to_string())?;
             ov.set_ignore_cursor_events(true).map_err(|e| e.to_string())?; // clicks pass through until the pen is on
+            // Windows can drop the click-through flag while the new window is still being set up, which
+            // leaves a full-screen layer eating every click. Apply it again once the window has settled.
+            let ov2 = ov.clone();
+            std::thread::spawn(move || {
+                for ms in [150u64, 600, 1500] {
+                    std::thread::sleep(std::time::Duration::from_millis(ms));
+                    if ov2.is_visible().unwrap_or(false) && !PEN_ON.load(Ordering::SeqCst) {
+                        let _ = ov2.set_ignore_cursor_events(true);
+                    }
+                }
+            });
         }
         let mut s = saved.0.lock().unwrap();
         if s.is_none() {
-            if let (Ok(p), Ok(z)) = (main.outer_position(), main.outer_size()) { *s = Some((p, z)); }
+            // A maximized or full-screen window ignores resizing (the Windows freeze): leave that state first.
+            let was_max = main.is_maximized().unwrap_or(false) || main.is_fullscreen().unwrap_or(false);
+            if main.is_fullscreen().unwrap_or(false) { let _ = main.set_fullscreen(false); }
+            if main.is_maximized().unwrap_or(false) { let _ = main.unmaximize(); }
+            if main.is_minimized().unwrap_or(false) { let _ = main.unminimize(); }
+            if let (Ok(p), Ok(z)) = (main.outer_position(), main.outer_size()) { *s = Some((p, z, was_max)); }
         }
         main.set_content_protected(true).map_err(|e| e.to_string())?;
         main.set_always_on_top(true).map_err(|e| e.to_string())?;
@@ -47,13 +67,19 @@ fn share_mode(app: tauri::AppHandle, on: bool) -> Result<(), String> {
             let _ = main.set_size(PhysicalSize::new(w as u32, h as u32));
             let _ = main.set_position(PhysicalPosition::new(mp.x + ms.width as i32 - w - (24.0 * scale) as i32, mp.y + ms.height as i32 - h - (80.0 * scale) as i32));
         }
+        // The control window must sit above the drawing layer, or the layer covers it.
+        let _ = main.set_always_on_top(false);
+        let _ = main.set_always_on_top(true);
+        let _ = main.set_focus();
     } else {
         if let Some(ov) = app.get_webview_window("overlay") { let _ = ov.close(); }
         main.set_content_protected(false).map_err(|e| e.to_string())?;
         main.set_always_on_top(false).map_err(|e| e.to_string())?;
-        if let Some((p, z)) = saved.0.lock().unwrap().take() {
+        PEN_ON.store(false, Ordering::SeqCst);
+        if let Some((p, z, was_max)) = saved.0.lock().unwrap().take() {
             let _ = main.set_size(z);
             let _ = main.set_position(p);
+            if was_max { let _ = main.maximize(); }
         }
         let _ = app.emit("iris-pen-state", false);
     }
@@ -65,6 +91,7 @@ fn share_mode(app: tauri::AppHandle, on: bool) -> Result<(), String> {
 #[tauri::command]
 fn overlay_pen(app: tauri::AppHandle, on: bool) -> Result<bool, String> {
     let ov = app.get_webview_window("overlay").ok_or("not sharing")?;
+    PEN_ON.store(on, Ordering::SeqCst);
     ov.set_ignore_cursor_events(!on).map_err(|e| e.to_string())?;
     if on { let _ = ov.set_focus(); }
     app.emit("iris-pen-state", on).map_err(|e| e.to_string())?;
