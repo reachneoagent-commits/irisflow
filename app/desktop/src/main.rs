@@ -19,7 +19,9 @@ fn share_mode(app: tauri::AppHandle, on: bool) -> Result<(), String> {
     let saved = app.state::<Saved>();
     eprintln!("[irisflow] share_mode on={on}");
     if on {
-        if app.get_webview_window("overlay").is_none() {
+        // Windows: the full-screen transparent layer is the suspected cause of the frozen screen
+        // (WebView2 can swallow every click), so Windows shares without the drawing layer.
+        if !cfg!(windows) && app.get_webview_window("overlay").is_none() {
             let m = app.primary_monitor().map_err(|e| e.to_string())?.ok_or("no monitor")?;
             let (pos, size, scale) = (m.position(), m.size(), m.scale_factor());
             let ov = WebviewWindowBuilder::new(&app, "overlay", WebviewUrl::App("overlay.html".into()))
