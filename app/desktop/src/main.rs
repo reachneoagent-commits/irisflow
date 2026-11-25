@@ -155,7 +155,25 @@ fn open_link(app: &tauri::AppHandle, urls: Vec<tauri::Url>) {
     }
 }
 
+// Windows laptops with two graphics cards (Intel + NVIDIA/AMD) often run apps on the weak one. Ask Windows
+// to use the high-performance card for this app, and tell the web engine to prefer it too.
+#[cfg(windows)]
+fn prefer_fast_gpu() {
+    use std::os::windows::process::CommandExt;
+    if std::env::var_os("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").is_none() {
+        std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--force_high_performance_gpu");
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        let _ = std::process::Command::new("reg")
+            .args(["add", r"HKCU\Software\Microsoft\DirectX\UserGpuPreferences", "/v", &exe.to_string_lossy(), "/t", "REG_SZ", "/d", "GpuPreference=2;", "/f"])
+            .creation_flags(0x0800_0000) // no console window
+            .status();
+    }
+}
+
 fn main() {
+    #[cfg(windows)]
+    prefer_fast_gpu();
     tauri::Builder::default()
         .manage(Saved::default())
         // A second launch (Windows opens a new process for each link) hands its link to the running app.

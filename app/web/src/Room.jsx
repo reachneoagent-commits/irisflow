@@ -2,12 +2,13 @@ import leftArt from './art/left.svg'
 import Credit from './Credit.jsx'
 import { RotateCcw, Home, X, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 import { reloginIfExpired } from './session.js'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { LiveKitRoom, usePreviewTracks, RoomAudioRenderer } from '@livekit/components-react'
 import Brand from './Brand.jsx'
 import MeetingView from './MeetingView.jsx'
 import { copyText } from './Invite.jsx'
 import { getGrant } from './grant.js'
+import { roomOptions } from './perf.jsx'
 
 const LK_URL = import.meta.env.VITE_LIVEKIT_URL
   || (location.protocol === 'https:' ? `wss://${location.host}/lk` : `ws://${location.hostname}:7880`)
@@ -86,6 +87,7 @@ const post = (path, body) => fetch(path, { method: 'POST', headers: { 'content-t
 
 export default function Room({ code, onLeave }) {
   const [stage, setStage] = useState('prejoin') // prejoin | waiting | denied | call | left
+  const opts = useMemo(() => roomOptions(), [])
   const [choices, setChoices] = useState(null)
   const [token, setToken] = useState(null)
   const [isHost, setIsHost] = useState(false)
@@ -185,6 +187,7 @@ export default function Room({ code, onLeave }) {
       serverUrl={LK_URL}
       token={token}
       connect
+      options={opts}
       video={choices.videoEnabled ? { deviceId: choices.videoDeviceId } : false}
       audio={choices.audioEnabled ? { deviceId: choices.audioDeviceId } : false}
       className="room-root"

@@ -14,6 +14,7 @@ import People, { useLobby } from './People.jsx'
 import Draw from './Draw.jsx'
 import DeviceMenu from './DeviceMenu.jsx'
 import MoreMenu, { useMedia } from './MoreMenu.jsx'
+import { shareCaptureOptions, useShareAdapt, ShareQuality } from './perf.jsx'
 
 // Camera-off tiles show the first letter of the person's name (styled in brand.css).
 function Tile(props) {
@@ -74,8 +75,9 @@ export default function MeetingView({ code, grant, isHost }) {
   }, [shares.map((t) => `${t.publication.trackSid}_${t.publication.isSubscribed}`).join(), tracks])
 
   // Phones can't capture the screen from a browser (no getDisplayMedia), so hide the dead button.
+  useShareAdapt()
   const canShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
-  const share = !canShare ? null : <div className="lk-button-group"><TrackToggle source={Track.Source.ScreenShare} captureOptions={{ audio: true, selfBrowserSurface: 'include' }} showIcon={true}>Share</TrackToggle></div>
+  const share = !canShare ? null : <div className="lk-button-group"><TrackToggle source={Track.Source.ScreenShare} captureOptions={shareCaptureOptions()} showIcon={true}>Share</TrackToggle><ShareQuality /></div>
   const leave = <DisconnectButton className="leave-btn" aria-label="Leave meeting" title="Leave meeting"><PhoneOff {...ICON} /><span className="blabel">Leave</span></DisconnectButton>
   const draw = <Draw hostRef={hostRef} host={host} sharerId={shares[0]?.participant.identity} canDraw />
   const people = <IconBtn short="People" label="People" active={panel === 'people'} badge={isHost && waiting.length ? waiting.length : 0} onClick={() => toggle('people')}><Users {...ICON} /></IconBtn>
