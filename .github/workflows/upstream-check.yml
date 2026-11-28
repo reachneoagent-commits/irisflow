@@ -1,0 +1,56 @@
+name: Upstream check
+
+# Once a week, compare the LiveKit pieces Irisflow ships (client SDK, React components, server SDK,
+# and the livekit-server image) with their latest releases, and open or update an issue labelled
+# "upstream-update" (the FlowApps launcher's Maintainer settings show it). Nothing is changed or
+# merged: a person updates on a branch and opens a pull request.
+
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream
+  cancel-in-progress: false
+
+# Keep gh on this repository, like the other FlowApps upstream workflows.
+env:
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compare with the latest LiveKit releases
+        id: report
+        run: |
+          set +e
+          python3 scripts/livekit_upstream.py > report.md
+          code=$?
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$code" = 1 ] && exit 1
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODE: ${{ steps.report.outputs.code }}
+        run: |
+          EXISTING=$(gh issue list --label upstream-update --state open --json number --jq '.[0].number')
+          if [ "$CODE" = 0 ]; then
+            [ -n "$EXISTING" ] && gh issue close "$EXISTING" --comment "Irisflow is up to date with LiveKit."
+            exit 0
+          fi
+          TITLE="LiveKit update available"
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --title "$TITLE" --body-file report.md
+          else
+            gh label create upstream-update --color 449837 --description "Upstream has changes to merge" 2>/dev/null || true
+            gh issue create --title "$TITLE" --body-file report.md --label upstream-update
+          fi
