@@ -90,7 +90,7 @@ jobs:
           path: out/*
       - name: Draft release (tag pushes)
         if: startsWith(github.ref, 'refs/tags/app-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           name: Irisflow ${{ steps.v.outputs.version }}
